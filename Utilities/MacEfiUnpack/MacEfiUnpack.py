@@ -96,10 +96,7 @@ if __name__ == '__main__':
         print('Usage: ./MacEfiUnpack.py filename [outdir]')
         sys.exit(-1)
     try:
-        if len(sys.argv) > 2:
-            outdir = sys.argv[2]
-        else:
-            outdir = os.path.dirname(sys.argv[1])
+        outdir = sys.argv[2] if len(sys.argv) > 2 else os.path.dirname(sys.argv[1])
         sys.exit(unpack_image(sys.argv[1], outdir))
     except Exception as e:
         print(f'ERROR {e}')

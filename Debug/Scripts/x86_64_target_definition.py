@@ -731,7 +731,6 @@ x86_64_register_infos = [
 
 
 def get_target_definition(triple):
-    g_target_definition = {}
     offset = 0
     for reg_info in x86_64_register_infos:
         reg_name = reg_info['name']
@@ -758,14 +757,12 @@ def get_target_definition(triple):
         if reg_num != LLDB_INVALID_REGNUM:
             reg_info['gdb'] = reg_num
 
-    g_target_definition['sets'] = [
-        'General Purpose Registers',
-        'Floating Point Registers']
-    g_target_definition['registers'] = x86_64_register_infos
-    g_target_definition[
-        'host-info'] = {'triple': triple, 'endian': eByteOrderLittle}
-    g_target_definition['g-packet-size'] = offset
-    return g_target_definition
+    return {
+        'sets': ['General Purpose Registers', 'Floating Point Registers'],
+        'registers': x86_64_register_infos,
+        'host-info': {'triple': triple, 'endian': eByteOrderLittle},
+        'g-packet-size': offset,
+    }
 
 
 def get_dynamic_setting(_, setting_name):
