@@ -10,9 +10,7 @@ import ida_bytes
 
 def readaddr(ea):
     a = ida_bytes.get_bytes(ea, 8)
-    if a == BADADDR:
-        return None
-    return struct.unpack("L", a)[0]
+    return None if a == BADADDR else struct.unpack("L", a)[0]
 
 
 def readstr(ea, length=256):
@@ -23,9 +21,7 @@ def readstr(ea, length=256):
     while 1:
         c = ida_bytes.get_bytes(ea, 1)
         if c == BADADDR:
-            if string == "":
-                return None
-            return string
+            return None if string == "" else string
         if c == "\0":
             return string
 

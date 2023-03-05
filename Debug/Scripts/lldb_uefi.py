@@ -93,7 +93,7 @@ class ReloadUefi:
             byte_size = sbdata.GetByteSize()
             data = array.array('B')
             error = lldb.SBError()
-            for i in range(0, byte_size):
+            for i in range(byte_size):
                 data.append(sbdata.GetUnsignedInt8(error, i))
             return data
 
@@ -187,7 +187,7 @@ class ReloadUefi:
 
     def offsetof(self, typename, field):
         t = self.ptype(typename)
-        for index in range(0, t.GetNumberOfFields()):
+        for index in range(t.GetNumberOfFields()):
             f = t.GetFieldAtIndex(index)
             if f.GetName() == field:
                 return f.GetOffsetInBytes()
@@ -280,10 +280,7 @@ class ReloadUefi:
             return cvp + self.sizeof('EFI_IMAGE_DEBUG_CODEVIEW_RSDS_ENTRY')
         if cvv == self.CV_MTOC:
             return cvp + self.sizeof('EFI_IMAGE_DEBUG_CODEVIEW_MTOC_ENTRY')
-        if cvv == 0:
-            return 0
-
-        return self.EINVAL
+        return 0 if cvv == 0 else self.EINVAL
 
     #
     # Prepares symbol load command with proper section information.
@@ -337,7 +334,7 @@ class ReloadUefi:
         if self.offset_by_headers:
             base = base + self.get_field(opt, 'SizeOfHeaders')
         if sym_name != self.EINVAL:
-            macho = os.path.isdir(sym_name + '.dSYM')
+            macho = os.path.isdir(f'{sym_name}.dSYM')
             if macho:
                 real_sym = sym_name
             else:
@@ -345,13 +342,15 @@ class ReloadUefi:
                 if sym_name_dbg != sym_name and os.path.exists(sym_name_dbg):
                     real_sym = sym_name_dbg
                 else:
-                    real_sym = None
                     paths = os.getenv('EFI_SYMBOL_PATH', '').split(':')
-                    for path in paths:
-                        if os.path.exists(os.path.join(path, sym_name)):
-                            real_sym = os.path.join(path, sym_name)
-                            break
-
+                    real_sym = next(
+                        (
+                            os.path.join(path, sym_name)
+                            for path in paths
+                            if os.path.exists(os.path.join(path, sym_name))
+                        ),
+                        None,
+                    )
             if real_sym:
                 syms.append(self.get_sym_cmd(real_sym, orgbase, sections, macho, base))
             else:
@@ -375,7 +374,7 @@ class ReloadUefi:
                 self.parse_image(entry.GetChildMemberWithName('LoadedImageProtocolInstance'), syms)
             else:
                 print(f'Skipping unknown EFI_DEBUG_IMAGE_INFO (Type {str(image_type)})')
-            index = index + 1
+            index += 1
         print('Loading new symbols...')
         for sym in syms:
             print(sym[0])
@@ -476,13 +475,13 @@ class ReloadUefi:
             gdb.execute('symbol-file')
             gdb.execute(f'symbol-file {args[0]}')
         else:
-            for i in range(0, self.debugger.GetNumTargets()):
+            for i in range(self.debugger.GetNumTargets()):
                 target = self.debugger.GetTargetAtIndex(i)
                 target_name = str(target)
                 print(f"Target {i} is '{target_name}'")
-                if target_name.find('GdbSyms') >= 0:
+                if 'GdbSyms' in target_name:
                     self.typetarget = target
-                elif target_name.find('No executable module.') >= 0:
+                elif 'No executable module.' in target_name:
                     self.activetarget = target
 
         if not self.typetarget:

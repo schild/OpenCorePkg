@@ -117,7 +117,7 @@ class ReloadUefi(gdb.Command):
         if bytes_length == 0:
             bytes_length = value.type.sizeof
         data = array.array('B')
-        for i in range(0, bytes_length):
+        for i in range(bytes_length):
             data.append(value_array[i])
         return data
 
@@ -134,7 +134,7 @@ class ReloadUefi(gdb.Command):
                     oldcrc = int(estp['Crc32'])
                     self.set_field(estp, 'Crc32', 0)
                     newcrc = self.crc32(self.value_data(estp.dereference(), 0))
-                    self.set_field(estp, 'Crc32', int(oldcrc))
+                    self.set_field(estp, 'Crc32', oldcrc)
                     if newcrc == oldcrc:
                         print(f'EFI_SYSTEM_TABLE_POINTER @ 0x{address:x}')
                         return estp['EfiSystemTableBase']
@@ -190,7 +190,7 @@ class ReloadUefi(gdb.Command):
         dosh = imagebase.cast(dosh_t)
         h_addr = int(imagebase)
         if dosh['e_magic'] == self.DOS_MAGIC:
-            h_addr = h_addr + int(dosh['e_lfanew'])
+            h_addr += int(dosh['e_lfanew'])
         return gdb.Value(h_addr).cast(head_t)
 
     #
@@ -277,8 +277,8 @@ class ReloadUefi(gdb.Command):
             sym_name = sym_name.cast(self.ptype('CHAR8')).string()
             sym_name_dbg = re.sub(r'\.dll$', '.debug', sym_name)
             macho = False
-            if os.path.isdir(sym_name + '.dSYM'):
-                sym_name += '.dSYM/Contents/Resources/DWARF/' + os.path.basename(sym_name)
+            if os.path.isdir(f'{sym_name}.dSYM'):
+                sym_name += f'.dSYM/Contents/Resources/DWARF/{os.path.basename(sym_name)}'
                 macho = True
             elif sym_name_dbg != sym_name and os.path.exists(sym_name_dbg):
                 # TODO: implement .elf handling.
@@ -371,10 +371,9 @@ class ReloadUefi(gdb.Command):
             # so we have to extract GdbSymbs.dll manually.
             lines = gdb.execute('info files', to_string=True).split('\n')
             for line in lines:
-                m = re.search("`([^']+)'", line)
-                if m:
+                if m := re.search("`([^']+)'", line):
                     gdb.execute('symbol-file')
-                    gdb.execute(f'symbol-file {m.group(1)}')
+                    gdb.execute(f'symbol-file {m[1]}')
                     break
 
         est = self.search_est()
@@ -391,7 +390,7 @@ class UefiStringPrinter:
         self.val = val
 
     def to_string(self):
-        return 'NULL' if not self.val else f'L"{UefiMisc.parse_utf16(self.val)}"'
+        return f'L"{UefiMisc.parse_utf16(self.val)}"' if self.val else 'NULL'
 
 
 class UefiEfiStatusPrinter:
@@ -419,15 +418,13 @@ class UefiGuidPrinter:
 
 
 def lookup_uefi_type(val):
-    if str(val.type) == 'const CHAR16 *' or str(val.type) == 'CHAR16 *':
+    if str(val.type) in {'const CHAR16 *', 'CHAR16 *'}:
         return UefiStringPrinter(val)
     if str(val.type) == 'EFI_STATUS':
         return UefiEfiStatusPrinter(val)
     if str(val.type) == 'RETURN_STATUS':
         return UefiReturnStatusPrinter(val)
-    if str(val.type) == 'GUID' or str(val.type) == 'EFI_GUID':
-        return UefiGuidPrinter(val)
-    return None
+    return UefiGuidPrinter(val) if str(val.type) in {'GUID', 'EFI_GUID'} else None
 
 
 ReloadUefi()

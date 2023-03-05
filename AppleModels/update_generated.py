@@ -46,7 +46,7 @@ def load_db(dbpath):
                     print(f'Failed to parse file {path} - {e}')
                     sys.exit(1)
 
-    if len(db) == 0:
+    if not db:
         print('Empty database!')
         sys.exit(1)
 
@@ -118,7 +118,7 @@ def validate_products(db, dbpd):
             to_add[name].append(product)
             continue
 
-    if len(to_add) > 0:
+    if to_add:
         for sysname in to_add.items():
             for info in db:
                 if sysname in info['Specifications']['SystemReportName']:
@@ -252,10 +252,14 @@ def export_mlb_boards(db, boards):
     mlb = {}
     for info in db:
         if len(info['SystemSerialNumber']) == 12:
-            models = [info['BoardProduct']] if not isinstance(info['BoardProduct'], list) else info['BoardProduct']
+            models = (
+                info['BoardProduct']
+                if isinstance(info['BoardProduct'], list)
+                else [info['BoardProduct']]
+            )
 
             for model in models:
-                mlb[model] = 'latest' if not info['MaximumOSVersion'] else info['MaximumOSVersion']
+                mlb[model] = info['MaximumOSVersion'] or 'latest'
 
     with open(boards, 'w', encoding='utf-8') as fh:
         json.dump(mlb, fh, indent=1)

@@ -107,15 +107,19 @@ def load_products(path='Products.zjson'):
                 for entry in db:
                     db[entry]['date'] = time.mktime(db[entry]['date'].timetuple())
             if len(db) > 0 and db[next(iter(db))].get('date', None) is not None:
-                newdb = {}
-                for entry in db:
-                    newdb[entry] = {
-                        KEY_NAME: db[entry]['name'] if db[entry]['name'] is not None else 0,
-                        KEY_EXCEPT: db[entry]['except'] if db[entry]['except'] is not None else 0,
+                return {
+                    entry: {
+                        KEY_NAME: db[entry]['name']
+                        if db[entry]['name'] is not None
+                        else 0,
+                        KEY_EXCEPT: db[entry]['except']
+                        if db[entry]['except'] is not None
+                        else 0,
                         KEY_STATUS: map_legacy_status(db[entry]['status']),
                         KEY_DATE: db[entry]['date'],
                     }
-                return newdb
+                    for entry in db
+                }
             return db
     except IOError:
         return {}

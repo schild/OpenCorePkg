@@ -4,6 +4,7 @@
 Validates schema files (e.g. OcConfigurationLib.c) for being sorted.
 """
 
+
 import re
 import sys
 
@@ -16,12 +17,11 @@ with open(sys.argv[1], 'r', encoding='utf-8') as f:
     content = [line.strip() for line in f.readlines()]
     for index, line in enumerate(content):
         if line == 'OC_SCHEMA':
-            print('Checking schema {}'.format(re.match(r'^\w+', content[index + 1]).group(0)))
+            print('Checking schema {}'.format(re.match(r'^\w+', content[index + 1])[0]))
             prev = ''
             continue
-        x = re.search(r'"([^"]+)"', line)
-        if x:
-            if x.group(1) < prev:
-                print(f'ERROR: {prev} precedes {x.group(1)}')
+        if x := re.search(r'"([^"]+)"', line):
+            if x[1] < prev:
+                print(f'ERROR: {prev} precedes {x[1]}')
                 sys.exit(1)
-            prev = x.group(1)
+            prev = x[1]
